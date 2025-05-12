@@ -4,7 +4,8 @@ import '../models/expense.dart';
 
 class NewExpenseForm extends StatefulWidget {
   final Function(Expense) onSubmit;
-  const NewExpenseForm({required this.onSubmit});
+  final Expense? existingExpense;
+  const NewExpenseForm({required this.onSubmit, this.existingExpense});
 
   @override
   _NewExpenseFormState createState() => _NewExpenseFormState();
@@ -15,6 +16,17 @@ class _NewExpenseFormState extends State<NewExpenseForm> {
   final _amountController = TextEditingController();
   DateTime? _selectedDate;
   String _selectedCategory = 'food';
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.existingExpense != null) {
+      _titleController.text = widget.existingExpense!.title;
+      _amountController.text = widget.existingExpense!.amount.toString();
+      _selectedDate = widget.existingExpense!.date;
+      _selectedCategory = widget.existingExpense!.category.name;
+    }
+  }
 
   void _presentDatePicker() async {
     DateTime? pickedDate = await showDatePicker(
@@ -38,7 +50,7 @@ class _NewExpenseFormState extends State<NewExpenseForm> {
       final title = _titleController.text;
       final amount = double.parse(_amountController.text);
       final newExpense = Expense(
-        id: DateTime.now().millisecondsSinceEpoch,
+        id: widget.existingExpense?.id ?? DateTime.now().millisecondsSinceEpoch,
         title: title,
         amount: amount,
         date: _selectedDate!,
@@ -89,19 +101,17 @@ class _NewExpenseFormState extends State<NewExpenseForm> {
                 _selectedCategory = value!;
               });
             },
-            items: Category.values.map((Category category) {
-              return DropdownMenuItem<String>(
-                value: category.name,
-                child: Text(category.name),
-              );
-            }).toList(),
+            items:
+                Category.values.map((Category category) {
+                  return DropdownMenuItem<String>(
+                    value: category.name,
+                    child: Text(category.name),
+                  );
+                }).toList(),
           ),
 
-          SizedBox(height: 20,),
-          ElevatedButton(
-            onPressed: submitForm, 
-            child: Text('Add Expense'),
-            )
+          SizedBox(height: 20),
+          ElevatedButton(onPressed: submitForm, child: Text('Add Expense')),
         ],
       ),
     );

@@ -12,6 +12,7 @@ class ExpenseTrackerHome extends StatefulWidget {
 }
 
 class _ExpenseTrackerHome extends State {
+  List<int> selectedExpenseId = [];
   final List<Expense> _registeredExpenses = [
     Expense(
       id: 1,
@@ -29,6 +30,68 @@ class _ExpenseTrackerHome extends State {
     ),
   ];
 
+  void _updateExpense(Expense expense) {
+    setState(() {
+      final index = _registeredExpenses.indexWhere(
+        (item) => item.id == expense.id,
+      );
+      if (index >= 0) {
+        _registeredExpenses[index] = expense;
+      }
+    });
+  }
+
+  void toggleSelection(int id, bool selected) {
+    setState(() {
+      if (selected) {
+        selectedExpenseId.add(id);
+      } else {
+        selectedExpenseId.remove(id);
+      }
+    });
+  }
+
+  void deletedSelectedExpense() {
+    setState(() {
+      _registeredExpenses.removeWhere(
+        (item) => selectedExpenseId.contains(item.id),
+      );
+    });
+  }
+
+  void editSelectedExpense() {
+    if (selectedExpenseId.length == 1) {
+      final selectedId = selectedExpenseId.first;
+      Expense? selectedExpense;
+      try {
+        selectedExpense = _registeredExpenses.firstWhere(
+          (e) => e.id == selectedId,
+        );
+      } catch (e) {
+        selectedExpense = null;
+      }
+
+      if (selectedExpense != null) {
+        showModalBottomSheet(
+          context: context,
+          builder: (_) {
+            return Padding(
+              padding: EdgeInsets.all(8.0),
+              child: NewExpenseForm(
+                onSubmit: _updateExpense,
+                existingExpense: selectedExpense,
+              ),
+            );
+          },
+        );
+      } else {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Expense not found.")));
+      }
+    }
+  }
+
   void _addNewExpense(Expense expense) {
     setState(() {
       _registeredExpenses.add(expense);
@@ -41,8 +104,8 @@ class _ExpenseTrackerHome extends State {
       builder: (_) {
         return Padding(
           padding: EdgeInsets.all(8.0),
-          child: NewExpenseForm(onSubmit: _addNewExpense)
-          );
+          child: NewExpenseForm(onSubmit: _addNewExpense),
+        );
       },
     );
   }
@@ -50,12 +113,34 @@ class _ExpenseTrackerHome extends State {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('My Expenses')),
+      appBar: AppBar(
+        title: Text('My Expenses'),
+        actions: [
+          if (selectedExpenseId.length == 1) ...[
+            IconButton(
+              onPressed: deletedSelectedExpense,
+              icon: Icon(Icons.delete),
+            ),
+            IconButton(onPressed: editSelectedExpense, icon: Icon(Icons.edit)),
+          ],
+          if (selectedExpenseId.isNotEmpty && selectedExpenseId.length > 1)
+            IconButton(
+              onPressed: deletedSelectedExpense,
+              icon: Icon(Icons.delete),
+            ),
+        ],
+      ),
+
       body: ListView.builder(
         itemCount: _registeredExpenses.length,
         itemBuilder: (context, index) {
           final expense = _registeredExpenses[index];
-          return ExpenseTile(key: ValueKey(expense.id), expense: expense);
+          return ExpenseTile(
+            key: ValueKey(expense.id),
+            expense: expense,
+            isSelected: selectedExpenseId.contains(expense.id),
+            onSelected: (selected) => toggleSelection(expense.id, selected),
+          );
         },
       ),
       floatingActionButton: FloatingActionButton(
